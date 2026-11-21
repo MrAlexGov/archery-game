@@ -2,357 +2,778 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Лучник — Стрельба по мишени</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Archery Master — Стрельба из лука</title>
 <style>
 :root {
-  --bg: #0a0f1a;
-  --fg: #e8f4fd;
-  --accent: #00f2ff;
+  --bg: #0d1117;
+  --bg-secondary: #161b22;
+  --fg: #e6edf3;
+  --muted: #8b949e;
+  --accent: #58a6ff;
+  --accent-glow: #58a6ff88;
   --gold: #ffd700;
-  --card: #111827;
-  --muted: #6b7c93;
+  --gold-glow: #ffd70088;
+  --red: #f85149;
+  --green: #3fb950;
+  --card: #21262d;
+  --border: #30363d;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
 body {
   background: var(--bg);
   color: var(--fg);
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 16px;
+  padding: 20px;
+  overflow-x: hidden;
+}
+.background {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -20%, #1a1f2e 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, #1e1a2e 0%, transparent 50%),
+    var(--bg);
   overflow: hidden;
 }
-.phone {
-  width: 100%;
-  max-width: 420px;
-  aspect-ratio: 9/16;
-  background: var(--card);
-  border-radius: 28px;
-  box-shadow: 0 0 0 4px #000a, 0 24px 48px -12px #000c, inset 0 1px 0 #fff1;
-  overflow: hidden;
-  position: relative;
-  touch-action: none;
-}
-canvas { display: block; width: 100%; height: 100%; }
-.overlay {
+.background::before {
+  content: '';
   position: absolute;
   inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, #58a6ff33, transparent),
+    radial-gradient(1px 1px at 40% 70%, #ffd70033, transparent),
+    radial-gradient(1px 1px at 60% 20%, #58a6ff22, transparent),
+    radial-gradient(1px 1px at 80% 60%, #ffd70022, transparent);
+  background-size: 300px 300px;
+  animation: starDrift 60s linear infinite;
+}
+@keyframes starDrift {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-300px, -300px); }
+}
+.game-container {
+  width: 100%;
+  max-width: 1200px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: linear-gradient(180deg, var(--card) 0%, var(--bg-secondary) 100%);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 4px 24px -8px #0008, inset 0 1px 0 #fff1;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.5rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, var(--accent), var(--gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.logo svg { width: 36px; height: 36px; }
+.stats {
+  display: flex;
+  gap: 24px;
+}
+.stat {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 24px;
-  text-align: center;
-  background: rgba(10, 15, 26, 0.92);
-  backdrop-filter: blur(6px);
-  z-index: 10;
-  transition: opacity 0.2s, visibility 0.2s;
+  gap: 4px;
 }
-.overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-.overlay h1 {
-  font-size: clamp(1.8rem, 6vw, 2.4rem);
+.stat-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.stat-value {
+  font-size: 1.5rem;
   font-weight: 700;
-  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+.stat-value.gold { color: var(--gold); }
+.stat-value.accent { color: var(--accent); }
+.stat-value.red { color: var(--red); }
+main {
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 20px;
+}
+@media (max-width: 980px) {
+  main { grid-template-columns: 1fr; }
+}
+.canvas-wrapper {
+  position: relative;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px -8px #000c, inset 0 1px 0 #fff1;
+}
+canvas { display: block; width: 100%; height: 100%; }
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.panel {
+  background: linear-gradient(180deg, var(--card) 0%, var(--bg-secondary) 100%);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 4px 24px -8px #0008, inset 0 1px 0 #fff1;
+}
+.panel-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.panel-title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.wind-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.wind-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 20px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.wind-arrow {
+  font-size: 3rem;
+  color: var(--accent);
+  filter: drop-shadow(0 0 12px var(--accent-glow));
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: inline-block;
+}
+.wind-speed {
+  font-size: 2rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+}
+.wind-desc { color: var(--muted); font-size: 0.85rem; text-align: center; }
+.wind-history {
+  display: flex;
+  gap: 8px;
+  height: 40px;
+  align-items: flex-end;
+}
+.wind-history-bar {
+  flex: 1;
+  background: linear-gradient(180deg, var(--accent), var(--accent-glow));
+  border-radius: 4px 4px 0 0;
+  transition: height 0.3s, background 0.3s;
+  min-height: 4px;
+}
+.wind-history-bar.strong { background: linear-gradient(180deg, var(--red), #f8514988); }
+.arrows-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.arrow-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.arrow-slot {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.arrow-slot.active {
+  background: linear-gradient(135deg, var(--accent-glow), var(--bg));
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 16px -4px var(--accent-glow);
+}
+.arrow-slot.used {
+  opacity: 0.3;
+  color: var(--border);
+}
+.arrow-slot svg { width: 24px; height: 24px; }
+.arrows-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.arrows-info strong { color: var(--fg); }
+.controls-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.btn {
+  appearance: none;
+  border: none;
+  border-radius: 10px;
+  padding: 14px 24px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), #3d8fd8);
+  color: #051020;
+  box-shadow: 0 4px 16px -4px var(--accent-glow);
+}
+.btn-primary:hover { box-shadow: 0 6px 24px -4px var(--accent-glow); }
+.btn-secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+.btn-secondary:hover { background: var(--accent-glow); }
+.btn-danger {
+  background: linear-gradient(135deg, var(--red), #d13b32);
+  color: #fff;
+  box-shadow: 0 4px 16px -4px #f8514988;
+}
+.charge-indicator {
+  height: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.charge-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--gold), var(--accent));
+  border-radius: 4px;
+  transition: width 0.05s linear, background 0.2s;
+}
+.charge-fill.full { background: linear-gradient(90deg, var(--red), var(--gold)); animation: pulse 0.5s infinite; }
+@keyframes pulse { 50% { opacity: 0.7; } }
+.mode-selector {
+  display: flex;
+  gap: 8px;
+}
+.mode-btn {
+  flex: 1;
+  padding: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.mode-btn:hover { border-color: var(--accent); color: var(--fg); }
+.mode-btn.active {
+  background: var(--accent-glow);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 16px -4px var(--accent-glow);
+}
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lb-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  transition: all 0.15s;
+}
+.lb-row:hover { border-color: var(--accent); background: var(--accent-glow); }
+.lb-rank {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: var(--border);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.lb-rank.gold { background: linear-gradient(135deg, var(--gold), #e6c200); color: #051020; }
+.lb-rank.silver { background: linear-gradient(135deg, #c0c0c0, #a0a0a0); color: #051020; }
+.lb-rank.bronze { background: linear-gradient(135deg, #cd7f32, #b87333); color: #fff; }
+.lb-name { flex: 1; font-weight: 500; }
+.lb-score { font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(13, 17, 23, 0.95);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.3s, visibility 0.3s;
+}
+.overlay.visible { opacity: 1; visibility: visible; }
+.overlay-content {
+  background: linear-gradient(180deg, var(--card) 0%, var(--bg-secondary) 100%);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 48px;
+  max-width: 480px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 24px 48px -12px #000c, 0 0 0 1px var(--border);
+  transform: scale(0.95);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.overlay.visible .overlay-content { transform: scale(1); }
+.overlay-title {
+  font-size: 2rem;
+  font-weight: 700;
   margin-bottom: 8px;
   background: linear-gradient(135deg, var(--accent), var(--gold));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
-.overlay p { color: var(--muted); margin-bottom: 24px; font-size: 0.95rem; line-height: 1.5; }
-.btn {
-  appearance: none;
-  border: none;
-  background: linear-gradient(135deg, var(--accent), #00c8e6);
-  color: #051020;
-  font-weight: 700;
-  font-size: 1rem;
-  padding: 14px 36px;
-  border-radius: 100px;
-  cursor: pointer;
-  touch-action: manipulation;
-  box-shadow: 0 4px 16px -4px var(--accent);
-  transition: transform 0.1s, box-shadow 0.1s;
-}
-.btn:active { transform: scale(0.97); box-shadow: 0 2px 8px -4px var(--accent); }
-.btn.secondary { background: transparent; color: var(--accent); border: 2px solid var(--accent); box-shadow: none; }
-.hud {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  right: 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  z-index: 5;
-  pointer-events: none;
-}
-.hud-item {
-  background: rgba(10, 15, 26, 0.85);
-  backdrop-filter: blur(4px);
-  border: 1px solid #1f2a44;
+.overlay-subtitle { color: var(--muted); margin-bottom: 32px; font-size: 1.1rem; }
+.overlay-btns { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+.toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 12px;
-  padding: 8px 14px;
-  font-size: 0.8rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-.hud-label { color: var(--muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; }
-.hud-value { color: var(--accent); font-weight: 700; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
-.hud-value.gold { color: var(--gold); }
-.wind-indicator {
-  position: absolute;
-  top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
+  padding: 14px 28px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: rgba(10, 15, 26, 0.85);
-  backdrop-filter: blur(4px);
-  border: 1px solid #1f2a44;
-  border-radius: 100px;
-  padding: 6px 14px;
-  font-size: 0.75rem;
-  color: var(--accent);
-  z-index: 5;
-  pointer-events: none;
-}
-.wind-arrow { display: inline-block; transition: transform 0.3s; font-size: 1rem; }
-.charge-bar {
-  position: absolute;
-  bottom: 120px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 200px;
-  height: 10px;
-  background: rgba(10, 15, 26, 0.8);
-  border: 1px solid #1f2a44;
-  border-radius: 5px;
-  overflow: hidden;
-  z-index: 5;
-  pointer-events: none;
+  gap: 12px;
+  box-shadow: 0 12px 32px -8px #000c;
   opacity: 0;
-  transition: opacity 0.15s;
+  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.3s;
+  z-index: 50;
 }
-.charge-bar.visible { opacity: 1; }
-.charge-fill {
-  height: 100%;
-  width: 0%;
-  background: linear-gradient(90deg, var(--gold), var(--accent));
-  border-radius: 5px;
-  transition: width 0.05s linear;
-}
-.instruction {
-  position: absolute;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%);
-  color: var(--muted);
-  font-size: 0.75rem;
-  text-align: center;
-  pointer-events: none;
-}
-.arrows-left {
-  position: absolute;
-  bottom: 60px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 6px;
-  z-index: 5;
-  pointer-events: none;
-}
-.arrow-icon {
-  width: 24px;
-  height: 24px;
-  opacity: 0.3;
-  filter: drop-shadow(0 0 4px var(--accent));
-  transition: opacity 0.2s;
-}
-.arrow-icon.active { opacity: 1; }
-@media (max-width: 480px) {
-  .phone { border-radius: 0; max-width: 100%; aspect-ratio: auto; height: 100vh; }
-  body { padding: 0; }
+.toast.visible { transform: translateX(-50%) translateY(0); opacity: 1; }
+.toast.success { border-color: var(--green); }
+.toast.error { border-color: var(--red); }
+.toast-icon { width: 20px; height: 20px; flex-shrink: 0; }
+@media (max-width: 768px) {
+  header { flex-direction: column; gap: 16px; text-align: center; }
+  .stats { width: 100%; justify-content: space-around; }
+  .overlay-content { padding: 32px 24px; }
+  .overlay-title { font-size: 1.5rem; }
 }
 </style>
 </head>
 <body>
-<div class="phone">
-  <canvas id="c"></canvas>
-
-  <div class="hud">
-    <div class="hud-item">
-      <span class="hud-label">Счёт</span>
-      <span class="hud-value" id="score">0</span>
+<div class="background"></div>
+<div class="game-container">
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M18 6l6 6-6 6M5 12l6-6 6 6"/></svg>
+      Archery Master
     </div>
-    <div class="hud-item">
-      <span class="hud-label">Лучший</span>
-      <span class="hud-value gold" id="best">0</span>
+    <div class="stats">
+      <div class="stat">
+        <span class="stat-label">Счёт</span>
+        <span class="stat-value accent" id="score">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Рекорд</span>
+        <span class="stat-value gold" id="best">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Серия</span>
+        <span class="stat-value" id="streak">0</span>
+      </div>
+      <div class="stat">
+        <span class="stat-label">Точность</span>
+        <span class="stat-value" id="accuracy">0%</span>
+      </div>
     </div>
-    <div class="hud-item">
-      <span class="hud-label">Стрел</span>
-      <span class="hud-value" id="arrows">10</span>
+  </header>
+
+  <main>
+    <div class="canvas-wrapper">
+      <canvas id="gameCanvas"></canvas>
+      <div class="charge-indicator" id="chargeBar">
+        <div class="charge-fill" id="chargeFill"></div>
+      </div>
     </div>
-  </div>
 
-  <div class="wind-indicator" id="windIndicator">
-    <span>Ветер</span>
-    <span class="wind-arrow" id="windArrow">→</span>
-    <span id="windValue">0.0</span>
-  </div>
+    <aside class="sidebar">
+      <div class="panel wind-panel">
+        <h3 class="panel-title">Ветер</h3>
+        <div class="wind-main">
+          <span class="wind-arrow" id="windArrow">→</span>
+          <span class="wind-speed" id="windSpeed">0.0</span>
+        </div>
+        <p class="wind-desc" id="windDesc">Штиль</p>
+        <div class="wind-history" id="windHistory"></div>
+      </div>
 
-  <div class="charge-bar" id="chargeBar">
-    <div class="charge-fill" id="chargeFill"></div>
-  </div>
+      <div class="panel arrows-panel">
+        <h3 class="panel-title">Стрелы</h3>
+        <div class="arrow-row">
+          <div class="arrow-slot active" id="arrowSlot0"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M18 6l6 6-6 6"/></svg></div>
+          <div class="arrow-slot active" id="arrowSlot1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M18 6l6 6-6 6"/></svg></div>
+          <div class="arrow-slot active" id="arrowSlot2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M18 6l6 6-6 6"/></svg></div>
+          <div class="arrow-slot active" id="arrowSlot3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M18 6l6 6-6 6"/></svg></div>
+          <div class="arrow-slot active" id="arrowSlot4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M18 6l6 6-6 6"/></svg></div>
+        </div>
+        <div class="arrow-row">
+          <div class="arrow-slot active" id="arrowSlot5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M18 6l6 6-6 6"/></svg></div>
+          <div class="arrow-slot active" id="arrowSlot6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M18 6l6 6-6 6"/></svg></div>
+          <div class="arrow-slot active" id="arrowSlot7"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M18 6l6 6-6 6"/></svg></div>
+          <div class="arrow-slot active" id="arrowSlot8"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M18 6l6 6-6 6"/></svg></div>
+          <div class="arrow-slot active" id="arrowSlot9"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M18 6l6 6-6 6"/></svg></div>
+        </div>
+        <div class="arrows-info">
+          <span>Осталось: <strong id="arrowsLeft">10</strong></span>
+          <span>Всего: <strong>10</strong></span>
+        </div>
+      </div>
 
-  <div class="arrows-left" id="arrowsLeft"></div>
+      <div class="panel controls-panel">
+        <h3 class="panel-title">Управление</h3>
+        <div class="mode-selector">
+          <button class="mode-btn active" data-mode="classic">Классика</button>
+          <button class="mode-btn" data-mode="moving">Движущиеся</button>
+          <button class="mode-btn" data-mode="timed">На время</button>
+        </div>
+        <button class="btn btn-primary" id="startBtn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21"/></svg>
+          Начать игру
+        </button>
+        <button class="btn btn-secondary" id="restartBtn" style="display:none">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/></svg>
+          Заново
+        </button>
+        <button class="btn btn-danger" id="menuBtn" style="display:none">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          В меню
+        </button>
+      </div>
 
-  <p class="instruction">Зажми и тяни назад, чтобы натянуть тетиву. Отпусти — выстрел.</p>
+      <div class="panel">
+        <h3 class="panel-title">Лидерборд</h3>
+        <div class="leaderboard" id="leaderboard"></div>
+      </div>
+    </aside>
+  </main>
+</div>
 
-  <div class="overlay" id="menuOverlay">
-    <h1>ЛУЧНИК</h1>
-    <p>Попадай в центр мишени. Учти ветер и гравитацию — чем дальше цель, тем сильнее отклонение.</p>
-    <button class="btn" id="startBtn">Начать игру</button>
-  </div>
-
-  <div class="overlay hidden" id="gameOverOverlay">
-    <h1>ИГРА ОКОНЧЕНА</h1>
-    <p>Твой счёт: <span id="finalScore" style="color:var(--accent);font-weight:700">0</span></p>
-    <p id="bestMsg" style="color:var(--muted);font-size:0.85rem"></p>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px">
-      <button class="btn" id="restartBtn">Заново</button>
-      <button class="btn secondary" id="menuBtn">В меню</button>
+<div class="overlay" id="startOverlay">
+  <div class="overlay-content">
+    <h2 class="overlay-title">Archery Master</h2>
+    <p class="overlay-subtitle">Проверь свою меткость. Учти ветер, гравитацию и дистанцию.</p>
+    <div class="overlay-btns">
+      <button class="btn btn-primary" id="overlayStart">Начать</button>
+      <button class="btn btn-secondary" id="overlayHow">Как играть</button>
     </div>
   </div>
 </div>
 
+<div class="overlay hidden" id="howOverlay">
+  <div class="overlay-content">
+    <h2 class="overlay-title">Как играть</h2>
+    <p class="overlay-subtitle" style="text-align:left; margin-bottom:24px">
+      <strong>Зажатие ЛКМ / палец</strong> — натянуть тетиву<br>
+      <strong>Движение мыши / свайп</strong> — прицелиться<br>
+      <strong>Отпускание</strong> — выстрел<br><br>
+      <strong>Ветер</strong> смещает стрелку в полёте. Чем дальше мишень, сильнее дрифт.<br>
+      <strong>Гравитация</strong> опускает стрелу — целись выше на дальние дистанции.<br><br>
+      <strong>Очки:</strong> центр (10), внутреннее кольцо (8), среднее (6), внешнее (4), край (2).<br>
+      <strong>Серия:</strong> попадания подряд увеличивают множитель очков.
+    </p>
+    <div class="overlay-btns">
+      <button class="btn btn-primary" id="howBack">Назад</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="gameOverOverlay">
+  <div class="overlay-content">
+    <h2 class="overlay-title">Игра окончена</h2>
+    <p class="overlay-subtitle">
+      Твой счёт: <strong id="finalScore" style="color:var(--accent)">0</strong><br>
+      Лучший: <strong id="finalBest" style="color:var(--gold)">0</strong><br>
+      Точность: <strong id="finalAcc" style="color:var(--green)">0%</strong><br>
+      Макс. серия: <strong id="finalStreak">0</strong>
+    </p>
+    <div class="overlay-btns">
+      <button class="btn btn-primary" id="playAgain">Сыграть ещё</button>
+      <button class="btn btn-secondary" id="toMenu">В меню</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <svg class="toast-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+  <span id="toastText"></span>
+</div>
+
 <script>
 (() => {
-const canvas = document.getElementById('c');
+const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-const VW = 360, VH = 640;
+const VW = 800, VH = 600;
 let DPR = 1;
 
 function resize() {
-  const rect = canvas.getBoundingClientRect();
+  const wrapper = canvas.parentElement;
+  const rect = wrapper.getBoundingClientRect();
+  const targetW = Math.min(VW, rect.width);
+  const targetH = Math.min(VH, targetW * VH / VW);
   DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-  canvas.width = Math.floor(rect.width * DPR);
-  canvas.height = Math.floor(rect.height * DPR);
+  canvas.width = Math.floor(targetW * DPR);
+  canvas.height = Math.floor(targetH * DPR);
+  canvas.style.width = targetW + 'px';
+  canvas.style.height = targetH + 'px';
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 }
 window.addEventListener('resize', resize);
 resize();
 
-const GRAVITY = 680;
-const ARROW_SPEED_MIN = 380;
-const ARROW_SPEED_MAX = 760;
-const CHARGE_TIME = 1.2;
+const GRAVITY = 720;
+const ARROW_SPEED_MIN = 350;
+const ARROW_SPEED_MAX = 780;
+const CHARGE_TIME = 1.4;
 const MAX_ARROWS = 10;
-const TARGET_RADIUS = 48;
-const TARGET_DISTANCE_MIN = 180;
-const TARGET_DISTANCE_MAX = 300;
+const TARGET_RADIUS = 56;
 
+const MODES = {
+  classic: { name: 'Классика', moving: false, timed: false, targets: 1, timeLimit: 0 },
+  moving: { name: 'Движущиеся', moving: true, timed: false, targets: 1, timeLimit: 0 },
+  timed: { name: 'На время', moving: false, timed: true, targets: 1, timeLimit: 60 }
+};
+
+let mode = 'classic';
 let state = 'MENU';
 let score = 0;
 let best = parseInt(localStorage.getItem('archery_best') || '0', 10);
+let streak = 0;
+let maxStreak = 0;
 let arrowsLeft = MAX_ARROWS;
+let arrowsHit = 0;
+let totalShots = 0;
 let wind = 0;
+let windHistory = [];
 let charge = 0;
 let charging = false;
 let chargeStart = 0;
 let lastTime = 0;
+let gameStartTime = 0;
+let timeLeft = 0;
 
-let target = { x: 0, y: 0, r: TARGET_RADIUS };
+let target = { x: 0, y: 0, r: TARGET_RADIUS, vx: 0 };
 let stuckArrows = [];
 let projectile = null;
+let particles = [];
 
-const menuOverlay = document.getElementById('menuOverlay');
-const gameOverOverlay = document.getElementById('gameOverOverlay');
-const startBtn = document.getElementById('startBtn');
-const restartBtn = document.getElementById('restartBtn');
-const menuBtn = document.getElementById('menuBtn');
 const chargeBar = document.getElementById('chargeBar');
 const chargeFill = document.getElementById('chargeFill');
 const windArrow = document.getElementById('windArrow');
-const windValue = document.getElementById('windValue');
+const windSpeed = document.getElementById('windSpeed');
+const windDesc = document.getElementById('windDesc');
+const windHistoryEl = document.getElementById('windHistory');
 const arrowsLeftEl = document.getElementById('arrowsLeft');
 const scoreEl = document.getElementById('score');
 const bestEl = document.getElementById('best');
-const arrowsEl = document.getElementById('arrows');
+const streakEl = document.getElementById('streak');
+const accuracyEl = document.getElementById('accuracy');
+const startBtn = document.getElementById('startBtn');
+const restartBtn = document.getElementById('restartBtn');
+const menuBtn = document.getElementById('menuBtn');
+const overlayStart = document.getElementById('overlayStart');
+const overlayHow = document.getElementById('overlayHow');
+const howBack = document.getElementById('howBack');
+const playAgain = document.getElementById('playAgain');
+const toMenu = document.getElementById('toMenu');
+const startOverlay = document.getElementById('startOverlay');
+const howOverlay = document.getElementById('howOverlay');
+const gameOverOverlay = document.getElementById('gameOverOverlay');
 const finalScoreEl = document.getElementById('finalScore');
-const bestMsgEl = document.getElementById('bestMsg');
+const finalBestEl = document.getElementById('finalBest');
+const finalAccEl = document.getElementById('finalAcc');
+const finalStreakEl = document.getElementById('finalStreak');
+const modeBtns = document.querySelectorAll('.mode-btn');
+const toast = document.getElementById('toast');
+const toastText = document.getElementById('toastText');
+const leaderboardEl = document.getElementById('leaderboard');
 
 function setOverlay(show, overlay) {
+  overlay.classList.toggle('visible', show);
   overlay.classList.toggle('hidden', !show);
+}
+function showToast(text, type = 'success') {
+  toastText.textContent = text;
+  toast.className = 'toast ' + type + ' visible';
+  setTimeout(() => toast.classList.remove('visible'), 3000);
 }
 function updateHUD() {
   scoreEl.textContent = score;
   bestEl.textContent = best;
-  arrowsEl.textContent = arrowsLeft;
-  arrowsLeftEl.innerHTML = '';
+  streakEl.textContent = streak;
+  const acc = totalShots ? Math.round((arrowsHit / totalShots) * 100) : 0;
+  accuracyEl.textContent = acc + '%';
+  arrowsLeftEl.textContent = arrowsLeft;
   for (let i = 0; i < MAX_ARROWS; i++) {
-    const div = document.createElement('div');
-    div.className = 'arrow-icon' + (i < arrowsLeft ? ' active' : '');
-    div.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M18 6l6 6-6 6"/></svg>`;
-    arrowsLeftEl.appendChild(div);
+    const slot = document.getElementById('arrowSlot' + i);
+    if (!slot) continue;
+    slot.className = 'arrow-slot';
+    if (i < arrowsLeft) slot.classList.add('active');
+    else if (i < MAX_ARROWS) slot.classList.add('used');
   }
 }
-function randomWind() {
-  wind = (Math.random() - 0.5) * 220;
+function updateWindDisplay() {
+  const absWind = Math.abs(wind);
   windArrow.style.transform = wind >= 0 ? 'rotate(0deg)' : 'rotate(180deg)';
-  windValue.textContent = Math.abs(wind).toFixed(1);
+  windSpeed.textContent = absWind.toFixed(1);
+  if (absWind < 10) windDesc.textContent = 'Штиль';
+  else if (absWind < 40) windDesc.textContent = 'Слабый';
+  else if (absWind < 80) windDesc.textContent = 'Умеренный';
+  else if (absWind < 120) windDesc.textContent = 'Сильный';
+  else windDesc.textContent = 'Штормовой';
+
+  windHistory.push(wind);
+  if (windHistory.length > 10) windHistory.shift();
+  windHistoryEl.innerHTML = '';
+  windHistory.forEach(w => {
+    const bar = document.createElement('div');
+    bar.className = 'wind-history-bar' + (Math.abs(w) > 80 ? ' strong' : '');
+    bar.style.height = Math.max(4, Math.min(40, Math.abs(w) / 4)) + 'px';
+    windHistoryEl.appendChild(bar);
+  });
+}
+function randomWind() {
+  wind = (Math.random() - 0.5) * 260;
+  updateWindDisplay();
 }
 function spawnTarget() {
-  const distance = TARGET_DISTANCE_MIN + Math.random() * (TARGET_DISTANCE_MAX - TARGET_DISTANCE_MIN);
-  const groundY = VH - 60;
+  const distance = 220 + Math.random() * 220;
+  const groundY = VH - 80;
   const targetY = groundY - TARGET_RADIUS - 10;
+  let vx = 0;
+  if (MODES[mode].moving) {
+    vx = (Math.random() - 0.5) * 60;
+  }
   target = {
     x: VW / 2 + distance,
     y: targetY,
     r: TARGET_RADIUS,
-    groundY: groundY
+    groundY: groundY,
+    vx,
+    baseX: VW / 2 + distance
   };
 }
 function resetGame() {
   score = 0;
+  streak = 0;
+  maxStreak = 0;
   arrowsLeft = MAX_ARROWS;
+  arrowsHit = 0;
+  totalShots = 0;
   stuckArrows = [];
   projectile = null;
+  particles = [];
   charging = false;
   charge = 0;
-  chargeBar.classList.remove('visible');
+  chargeBar.style.display = 'none';
   chargeFill.style.width = '0%';
   randomWind();
   spawnTarget();
+  gameStartTime = performance.now() / 1000;
+  timeLeft = MODES[mode].timeLimit;
   updateHUD();
+  updateLeaderboard();
 }
 function startGame() {
   state = 'PLAYING';
   resetGame();
-  setOverlay(false, menuOverlay);
+  setOverlay(false, startOverlay);
+  setOverlay(false, howOverlay);
   setOverlay(false, gameOverOverlay);
+  startBtn.style.display = 'none';
+  restartBtn.style.display = 'flex';
+  menuBtn.style.display = 'flex';
 }
 function endGame() {
   state = 'GAMEOVER';
   if (score > best) {
     best = score;
     localStorage.setItem('archery_best', String(best));
-    bestMsgEl.textContent = '🏆 Новый рекорд!';
-    bestMsgEl.style.color = 'var(--gold)';
-  } else {
-    bestMsgEl.textContent = `Рекорд: ${best}`;
-    bestMsgEl.style.color = 'var(--muted)';
+    showToast('🏆 Новый рекорд!', 'success');
   }
   finalScoreEl.textContent = score;
+  finalBestEl.textContent = best;
+  finalAccEl.textContent = (totalShots ? Math.round((arrowsHit / totalShots) * 100) : 0) + '%';
+  finalStreakEl.textContent = maxStreak;
   setOverlay(true, gameOverOverlay);
+  restartBtn.style.display = 'none';
+  menuBtn.style.display = 'none';
+  startBtn.style.display = 'flex';
+  saveScore();
+  updateLeaderboard();
 }
 
 function getPointerPos(e) {
@@ -369,16 +790,17 @@ function onPointerDown(e) {
   if (state !== 'PLAYING') return;
   if (arrowsLeft <= 0) return;
   if (projectile) return;
+  if (MODES[mode].timed && timeLeft <= 0) return;
   const pos = getPointerPos(e);
-  const bowX = 60;
-  const bowY = VH / 2 + 40;
+  const bowX = 80;
+  const bowY = VH / 2 + 30;
   const dx = pos.x - bowX;
   const dy = pos.y - bowY;
   const dist = Math.hypot(dx, dy);
-  if (dist > 180) return;
+  if (dist > 220) return;
   charging = true;
   chargeStart = performance.now() / 1000;
-  chargeBar.classList.add('visible');
+  chargeBar.style.display = 'block';
   e.preventDefault();
 }
 function onPointerMove(e) {
@@ -386,37 +808,40 @@ function onPointerMove(e) {
   const now = performance.now() / 1000;
   charge = Math.min(1, (now - chargeStart) / CHARGE_TIME);
   chargeFill.style.width = (charge * 100) + '%';
+  chargeFill.classList.toggle('full', charge >= 1);
 }
 function onPointerUp(e) {
   if (!charging) return;
   charging = false;
-  chargeBar.classList.remove('visible');
+  chargeBar.style.display = 'none';
   chargeFill.style.width = '0%';
+  chargeFill.classList.remove('full');
 
   const pos = getPointerPos(e);
-  const bowX = 60;
-  const bowY = VH / 2 + 40;
+  const bowX = 80;
+  const bowY = VH / 2 + 30;
   const dx = pos.x - bowX;
   const dy = pos.y - bowY;
   const angle = Math.atan2(dy, dx);
 
-  const speed = ARROW_SPEED_MIN + (ARROW_SPEED_MAX - ARROW_SPEED_MIN) * Math.max(0.15, charge);
+  const minCharge = 0.15;
+  const effectiveCharge = Math.max(minCharge, charge);
+  const speed = ARROW_SPEED_MIN + (ARROW_SPEED_MAX - ARROW_SPEED_MIN) * effectiveCharge;
   const vx = Math.cos(angle) * speed;
   const vy = Math.sin(angle) * speed;
 
   projectile = {
     x: bowX,
     y: bowY,
-    vx,
-    vy,
+    vx, vy,
     angle,
-    length: 48,
+    length: 52,
     stuck: false,
-    wx: 0,
-    wy: 0,
-    wang: 0
+    wx: 0, wy: 0, wang: 0,
+    trail: []
   };
   arrowsLeft--;
+  totalShots++;
   updateHUD();
   charge = 0;
 }
@@ -431,57 +856,111 @@ restartBtn.addEventListener('click', startGame);
 menuBtn.addEventListener('click', () => {
   state = 'MENU';
   setOverlay(false, gameOverOverlay);
-  setOverlay(true, menuOverlay);
+  setOverlay(false, howOverlay);
+  setOverlay(true, startOverlay);
+  restartBtn.style.display = 'none';
+  menuBtn.style.display = 'none';
+  startBtn.style.display = 'flex';
   resetGame();
+});
+overlayStart.addEventListener('click', startGame);
+overlayHow.addEventListener('click', () => {
+  setOverlay(false, startOverlay);
+  setOverlay(true, howOverlay);
+});
+howBack.addEventListener('click', () => {
+  setOverlay(false, howOverlay);
+  setOverlay(true, startOverlay);
+});
+playAgain.addEventListener('click', startGame);
+toMenu.addEventListener('click', () => {
+  setOverlay(false, gameOverOverlay);
+  setOverlay(true, startOverlay);
+});
+modeBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    mode = btn.dataset.mode;
+    modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+    if (state === 'MENU') resetGame();
+  });
 });
 
 function update(dt) {
   if (state !== 'PLAYING') return;
 
+  if (MODES[mode].timed) {
+    timeLeft -= dt;
+    if (timeLeft <= 0) {
+      timeLeft = 0;
+      endGame();
+      return;
+    }
+  }
+
+  if (MODES[mode].moving) {
+    target.x += target.vx * dt;
+    const maxOffset = 120;
+    if (Math.abs(target.x - target.baseX) > maxOffset) {
+      target.vx *= -1;
+    }
+  }
+
   if (projectile && !projectile.stuck) {
     projectile.vy += GRAVITY * dt;
-    projectile.vx += wind * dt * 0.6;
+    projectile.vx += wind * dt * 0.5;
     projectile.x += projectile.vx * dt;
     projectile.y += projectile.vy * dt;
     projectile.angle = Math.atan2(projectile.vy, projectile.vx);
+
+    projectile.trail.push({ x: projectile.x, y: projectile.y, life: 1 });
+    if (projectile.trail.length > 20) projectile.trail.shift();
 
     const dx = target.x - projectile.x;
     const dy = target.y - projectile.y;
     const dist = Math.hypot(dx, dy);
 
-    if (dist <= target.r + 4) {
+    if (dist <= target.r + 5) {
       projectile.stuck = true;
       projectile.wx = projectile.x;
       projectile.wy = projectile.y;
       projectile.wang = projectile.angle;
 
       const hitDist = dist;
-      const accuracy = 1 - hitDist / (target.r + 4);
-      let points = Math.max(1, Math.round(10 * accuracy));
-      if (hitDist <= target.r * 0.15) points = 10;
-      else if (hitDist <= target.r * 0.35) points = 8;
-      else if (hitDist <= target.r * 0.6) points = 6;
-      else if (hitDist <= target.r * 0.85) points = 4;
-      else points = 2;
+      let points, ringName;
+      if (hitDist <= target.r * 0.12) { points = 10; ringName = '10'; }
+      else if (hitDist <= target.r * 0.3) { points = 8; ringName = '8'; }
+      else if (hitDist <= target.r * 0.55) { points = 6; ringName = '6'; }
+      else if (hitDist <= target.r * 0.8) { points = 4; ringName = '4'; }
+      else { points = 2; ringName = '2'; }
+
+      streak++;
+      maxStreak = Math.max(maxStreak, streak);
+      points *= (1 + Math.min(streak - 1, 4) * 0.1);
+      points = Math.round(points);
 
       score += points;
-      stuckArrows.push({ x: projectile.wx, y: projectile.wy, angle: projectile.wang, points });
+      arrowsHit++;
+      stuckArrows.push({ x: projectile.wx, y: projectile.wy, angle: projectile.wang, points, ring: ringName });
+      for (let i = 0; i < 12; i++) addParticle(projectile.wx, projectile.wy, points >= 8 ? '#ffd700' : '#58a6ff');
+
+      showToast('+' + points + ' (' + ringName + ')', points >= 8 ? 'success' : 'success');
       updateHUD();
       projectile = null;
 
-      if (arrowsLeft <= 0) {
-        setTimeout(endGame, 600);
+      if (arrowsLeft <= 0 || (MODES[mode].timed && timeLeft <= 0)) {
+        setTimeout(endGame, 500);
       } else {
         setTimeout(() => {
           randomWind();
           spawnTarget();
-        }, 800);
+        }, 700);
       }
     }
 
-    if (projectile && (projectile.y > VH + 50 || projectile.x < -50 || projectile.x > VW + 50)) {
+    if (projectile && (projectile.y > VH + 60 || projectile.x < -60 || projectile.x > VW + 60)) {
+      streak = 0;
       projectile = null;
-      if (arrowsLeft <= 0) {
+      if (arrowsLeft <= 0 || (MODES[mode].timed && timeLeft <= 0)) {
         setTimeout(endGame, 300);
       } else {
         setTimeout(() => {
@@ -491,40 +970,71 @@ function update(dt) {
       }
     }
   }
+
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += 200 * dt;
+    p.life -= dt * 3;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+}
+
+function addParticle(x, y, color) {
+  const angle = Math.random() * Math.PI * 2;
+  const speed = 60 + Math.random() * 120;
+  particles.push({
+    x, y,
+    vx: Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed - 50,
+    color,
+    size: 2 + Math.random() * 3,
+    life: 1
+  });
 }
 
 function drawTarget() {
   const { x, y, r } = target;
-  const rings = 5;
-  for (let i = rings; i >= 1; i--) {
-    const rr = (r * i) / rings;
+  const rings = [
+    { mult: 1.0, color: '#fff' },
+    { mult: 0.8, color: '#1a1a2e' },
+    { mult: 0.6, color: '#fff' },
+    { mult: 0.4, color: '#1a1a2e' },
+    { mult: 0.2, color: '#fff' }
+  ];
+  rings.forEach(ring => {
     ctx.beginPath();
-    ctx.arc(x, y, rr, 0, Math.PI * 2);
-    const isOdd = i % 2 === 1;
-    ctx.fillStyle = isOdd ? '#ffffff' : '#1a1a2e';
+    ctx.arc(x, y, r * ring.mult, 0, Math.PI * 2);
+    ctx.fillStyle = ring.color;
     ctx.fill();
-  }
+  });
   ctx.beginPath();
-  ctx.arc(x, y, r / rings, 0, Math.PI * 2);
-  ctx.fillStyle = '#00f2ff';
+  ctx.arc(x, y, r * 0.12, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffd700';
+  ctx.shadowColor = '#ffd700';
+  ctx.shadowBlur = 12;
   ctx.fill();
+  ctx.shadowBlur = 0;
 
-  ctx.strokeStyle = '#00f2ff44';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#58a6ff44';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([8, 8]);
   ctx.beginPath();
-  ctx.moveTo(x - r - 10, y);
-  ctx.lineTo(x + r + 10, y);
+  ctx.moveTo(x - r - 15, y);
+  ctx.lineTo(x + r + 15, y);
   ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(x, y - r - 10);
-  ctx.lineTo(x, y + r + 10);
+  ctx.moveTo(x, y - r - 15);
+  ctx.lineTo(x, y + r + 15);
   ctx.stroke();
+  ctx.setLineDash([]);
 }
 
-function drawArrow(ax, ay, angle, stuck = false, points = null) {
-  const len = 48;
-  const headLen = 14;
-  const shaftW = 3;
+function drawArrow(ax, ay, angle, stuck = false, points = null, ring = null) {
+  const len = 52;
+  const headLen = 16;
+  const shaftW = 3.5;
 
   const cx = ax - Math.cos(angle) * (len * 0.45);
   const cy = ay - Math.sin(angle) * (len * 0.45);
@@ -534,68 +1044,81 @@ function drawArrow(ax, ay, angle, stuck = false, points = null) {
   ctx.rotate(angle);
 
   const grad = ctx.createLinearGradient(-len * 0.45, 0, len * 0.55, 0);
-  grad.addColorStop(0, '#2a2a3e');
-  grad.addColorStop(0.5, '#3d3d5c');
-  grad.addColorStop(1, '#1a1a2e');
+  grad.addColorStop(0, '#1e1e2e');
+  grad.addColorStop(0.5, '#2d2d44');
+  grad.addColorStop(1, '#151522');
   ctx.fillStyle = grad;
   ctx.fillRect(-len * 0.45, -shaftW / 2, len, shaftW);
 
-  ctx.fillStyle = stuck ? '#ffd700' : '#00f2ff';
+  ctx.fillStyle = stuck ? '#ffd700' : '#58a6ff';
+  ctx.shadowColor = stuck ? '#ffd700' : '#58a6ff';
+  ctx.shadowBlur = stuck ? 10 : 6;
   ctx.beginPath();
   ctx.moveTo(len * 0.55, 0);
-  ctx.lineTo(len * 0.55 - headLen, -headLen * 0.5);
-  ctx.lineTo(len * 0.55 - headLen, headLen * 0.5);
+  ctx.lineTo(len * 0.55 - headLen, -headLen * 0.55);
+  ctx.lineTo(len * 0.55 - headLen, headLen * 0.55);
   ctx.closePath();
   ctx.fill();
+  ctx.shadowBlur = 0;
 
   ctx.fillStyle = '#8b6b2a';
-  ctx.fillRect(-len * 0.45 - 4, -shaftW / 2, 4, shaftW);
+  ctx.fillRect(-len * 0.45 - 5, -shaftW / 2, 5, shaftW);
 
-  ctx.fillStyle = stuck ? '#ffd70088' : '#00f2ff44';
+  ctx.fillStyle = stuck ? '#ffd700aa' : '#58a6ff66';
   ctx.beginPath();
-  ctx.moveTo(-len * 0.45 - 4, -shaftW / 2);
-  ctx.lineTo(-len * 0.45 - 10, -8);
-  ctx.lineTo(-len * 0.45 - 10, 8);
+  ctx.moveTo(-len * 0.45 - 5, -shaftW / 2);
+  ctx.lineTo(-len * 0.45 - 12, -10);
+  ctx.lineTo(-len * 0.45 - 12, 10);
   ctx.closePath();
   ctx.fill();
 
   ctx.restore();
 
   if (stuck && points !== null) {
-    ctx.fillStyle = points >= 8 ? '#ffd700' : '#00f2ff';
-    ctx.font = 'bold 14px system-ui';
+    ctx.fillStyle = points >= 8 ? '#ffd700' : '#58a6ff';
+    ctx.shadowColor = points >= 8 ? '#ffd700' : '#58a6ff';
+    ctx.shadowBlur = 8;
+    ctx.font = 'bold 16px system-ui';
     ctx.textAlign = 'center';
-    ctx.fillText(`+${points}`, ax, ay - 30);
+    ctx.fillText('+' + points, ax, ay - 35);
+    if (ring) {
+      ctx.font = '12px system-ui';
+      ctx.fillText(ring, ax, ay - 18);
+    }
+    ctx.shadowBlur = 0;
   }
 }
 
 function drawBow(chargeAmt) {
-  const bowX = 60;
-  const bowY = VH / 2 + 40;
-  const drawDist = 80 * chargeAmt;
+  const bowX = 80;
+  const bowY = VH / 2 + 30;
+  const drawDist = 100 * chargeAmt;
 
-  ctx.strokeStyle = '#00f2ff';
-  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#58a6ff';
+  ctx.lineWidth = 5;
   ctx.lineCap = 'round';
+  ctx.shadowColor = '#58a6ff';
+  ctx.shadowBlur = 8;
   ctx.beginPath();
-  const curve = 60 + drawDist * 0.5;
-  ctx.moveTo(bowX, bowY - 100);
-  ctx.quadraticCurveTo(bowX - curve, bowY, bowX, bowY + 100);
+  const curve = 80 + drawDist * 0.6;
+  ctx.moveTo(bowX, bowY - 130);
+  ctx.quadraticCurveTo(bowX - curve, bowY, bowX, bowY + 130);
   ctx.stroke();
 
   ctx.strokeStyle = '#8b6b2a';
-  ctx.lineWidth = 3;
+  ctx.lineWidth = 4;
+  ctx.shadowBlur = 0;
   ctx.beginPath();
-  ctx.moveTo(bowX, bowY - 100);
+  ctx.moveTo(bowX, bowY - 130);
   ctx.lineTo(bowX - drawDist, bowY);
-  ctx.lineTo(bowX, bowY + 100);
+  ctx.lineTo(bowX, bowY + 130);
   ctx.stroke();
 
   ctx.fillStyle = '#1a1a2e';
   ctx.beginPath();
-  ctx.arc(bowX, bowY, 14, 0, Math.PI * 2);
+  ctx.arc(bowX, bowY, 18, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = '#00f2ff';
+  ctx.strokeStyle = '#58a6ff';
   ctx.lineWidth = 2;
   ctx.stroke();
 }
@@ -605,33 +1128,65 @@ function drawProjectile() {
   if (projectile.stuck) {
     drawArrow(projectile.wx, projectile.wy, projectile.wang, true);
   } else {
+    if (projectile.trail.length > 1) {
+      ctx.strokeStyle = '#58a6ff66';
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(projectile.trail[0].x, projectile.trail[0].y);
+      for (let i = 1; i < projectile.trail.length; i++) {
+        const t = projectile.trail[i];
+        const alpha = i / projectile.trail.length;
+        ctx.globalAlpha = alpha * 0.4;
+        ctx.lineTo(t.x, t.y);
+      }
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
     drawArrow(projectile.x, projectile.y, projectile.angle, false);
   }
 }
 
 function drawStuckArrows() {
   for (const a of stuckArrows) {
-    drawArrow(a.x, a.y, a.angle, true, a.points);
+    drawArrow(a.x, a.y, a.angle, true, a.points, a.ring);
   }
 }
 
+function drawParticles() {
+  for (const p of particles) {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+  }
+  ctx.globalAlpha = 1;
+}
+
 function drawGround() {
-  const groundY = VH - 60;
-  ctx.fillStyle = '#0d1422';
+  const groundY = VH - 80;
+  const grad = ctx.createLinearGradient(0, groundY, 0, VH);
+  grad.addColorStop(0, '#101826');
+  grad.addColorStop(1, '#080c14');
+  ctx.fillStyle = grad;
   ctx.fillRect(0, groundY, VW, VH - groundY);
 
   ctx.fillStyle = '#1a2335';
-  for (let x = -20; x < VW + 40; x += 40) {
-    const h = 20 + Math.sin(x * 0.05) * 8;
+  for (let x = -30; x < VW + 60; x += 60) {
+    const h = 25 + Math.sin((x + performance.now() / 2000) * 0.04) * 10;
     ctx.beginPath();
     ctx.moveTo(x, groundY);
-    ctx.lineTo(x + 20, groundY - h);
-    ctx.lineTo(x + 40, groundY);
+    ctx.lineTo(x + 30, groundY - h);
+    ctx.lineTo(x + 60, groundY);
     ctx.closePath();
     ctx.fill();
   }
 
-  ctx.strokeStyle = '#00f2ff22';
+  ctx.strokeStyle = '#58a6ff1a';
   ctx.lineWidth = 1;
   ctx.beginPath();
   ctx.moveTo(0, groundY);
@@ -639,53 +1194,95 @@ function drawGround() {
   ctx.stroke();
 }
 
-function drawWindParticles() {
-  if (Math.abs(wind) < 10) return;
-  ctx.fillStyle = '#00f2ff33';
+function drawBackground() {
+  ctx.clearRect(0, 0, VW, VH);
+
+  const grad = ctx.createLinearGradient(0, 0, 0, VH);
+  grad.addColorStop(0, '#080c14');
+  grad.addColorStop(0.4, '#0d1426');
+  grad.addColorStop(1, '#101826');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, VW, VH);
+
+  ctx.fillStyle = '#58a6ff08';
+  for (let i = 0; i < 50; i++) {
+    const x = (i * 149 + performance.now() / 120) % VW;
+    const y = (i * 211 + performance.now() / 180) % VH;
+    ctx.beginPath();
+    ctx.arc(x, y, 0.5 + Math.sin(i * 0.7) * 0.8, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const moonX = VW - 100;
+  const moonY = 100;
+  const moonGrad = ctx.createRadialGradient(moonX, moonY, 0, moonX, moonY, 60);
+  moonGrad.addColorStop(0, '#fff8');
+  moonGrad.addColorStop(0.5, '#58a6ff1a');
+  moonGrad.addColorStop(1, '#58a6ff00');
+  ctx.fillStyle = moonGrad;
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, 60, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#1a2335';
+  for (let x = -50; x < VW + 100; x += 100) {
+    const h = 80 + Math.sin((x + performance.now() / 5000) * 0.02) * 30;
+    ctx.beginPath();
+    ctx.moveTo(x, VH - 80);
+    ctx.lineTo(x + 50, VH - 80 - h);
+    ctx.lineTo(x + 100, VH - 80);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+function drawWindIndicator() {
+  if (Math.abs(wind) < 15) return;
+  ctx.fillStyle = '#58a6ff22';
   const dir = wind > 0 ? 1 : -1;
-  for (let i = 0; i < 12; i++) {
-    const x = (VW / 2 + target.x) / 2 + Math.sin(performance.now() / 800 + i) * 40 * dir;
-    const y = target.y - 60 + i * 10;
-    const r = 2 + Math.sin(performance.now() / 600 + i) * 1.5;
+  for (let i = 0; i < 20; i++) {
+    const x = target.x + Math.sin(performance.now() / 600 + i * 0.5) * 80 * dir;
+    const y = target.y - 100 + i * 12;
+    const r = 2.5 + Math.sin(performance.now() / 500 + i) * 1.5;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
   }
 }
 
+function drawDistanceMarker() {
+  const dist = Math.round(target.x - VW / 2);
+  ctx.fillStyle = '#58a6ff88';
+  ctx.font = '14px system-ui';
+  ctx.textAlign = 'center';
+  ctx.fillText(dist + ' м', target.x, target.y + target.r + 30);
+}
+
 function draw() {
-  ctx.clearRect(0, 0, VW, VH);
-
-  const grad = ctx.createLinearGradient(0, 0, 0, VH);
-  grad.addColorStop(0, '#0a0f1a');
-  grad.addColorStop(0.5, '#0d1426');
-  grad.addColorStop(1, '#0f1a2e');
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, VW, VH);
-
-  ctx.fillStyle = '#00f2ff11';
-  for (let i = 0; i < 30; i++) {
-    const x = (i * 127 + performance.now() / 80) % VW;
-    const y = (i * 193 + performance.now() / 120) % VH;
-    ctx.beginPath();
-    ctx.arc(x, y, 0.5 + Math.sin(i) * 0.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
+  drawBackground();
   drawGround();
-  drawWindParticles();
+  drawWindIndicator();
+  drawDistanceMarker();
   drawTarget();
   drawStuckArrows();
+  drawParticles();
   drawProjectile();
   drawBow(charging ? charge : 0);
 
   if (state === 'PLAYING' && charging) {
-    const bowX = 60;
-    const bowY = VH / 2 + 40;
-    ctx.fillStyle = '#00f2ff88';
-    ctx.font = '12px system-ui';
+    const bowX = 80;
+    const bowY = VH / 2 + 30;
+    ctx.fillStyle = '#58a6ff';
+    ctx.font = '14px system-ui';
     ctx.textAlign = 'left';
-    ctx.fillText(`${Math.round(charge * 100)}%`, bowX + 20, bowY - 120);
+    ctx.fillText(Math.round(charge * 100) + '%', bowX + 25, bowY - 150);
+  }
+
+  if (MODES[mode].timed) {
+    ctx.fillStyle = timeLeft < 10 ? '#f85149' : '#58a6ff';
+    ctx.font = 'bold 28px system-ui';
+    ctx.textAlign = 'right';
+    ctx.fillText(timeLeft.toFixed(1) + 'с', VW - 20, 50);
   }
 }
 
@@ -695,6 +1292,33 @@ function loop(t) {
   update(dt);
   draw();
   requestAnimationFrame(loop);
+}
+
+function saveScore() {
+  const scores = JSON.parse(localStorage.getItem('archery_scores') || '[]');
+  scores.push({ score, mode, date: Date.now() });
+  scores.sort((a, b) => b.score - a.score);
+  if (scores.length > 10) scores.length = 10;
+  localStorage.setItem('archery_scores', JSON.stringify(scores));
+}
+function updateLeaderboard() {
+  const scores = JSON.parse(localStorage.getItem('archery_scores') || '[]');
+  leaderboardEl.innerHTML = '';
+  if (scores.length === 0) {
+    leaderboardEl.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">Пока нет рекордов</div>';
+    return;
+  }
+  scores.slice(0, 8).forEach((s, i) => {
+    const row = document.createElement('div');
+    row.className = 'lb-row';
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    row.innerHTML = `
+      <span class="lb-rank ${rankClass}">${i + 1}</span>
+      <span class="lb-name">${MODES[s.mode].name}</span>
+      <span class="lb-score">${s.score}</span>
+    `;
+    leaderboardEl.appendChild(row);
+  });
 }
 
 requestAnimationFrame(loop);
