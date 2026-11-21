@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Лучник — Стрельба по мишени</title>
+<style>
+:root {
+  --bg: #0a0f1a;
+  --fg: #e8f4fd;
+  --accent: #00f2ff;
+  --gold: #ffd700;
+  --card: #111827;
+  --muted: #6b7c93;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  overflow: hidden;
+}
+.phone {
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 9/16;
+  background: var(--card);
+  border-radius: 28px;
+  box-shadow: 0 0 0 4px #000a, 0 24px 48px -12px #000c, inset 0 1px 0 #fff1;
+  overflow: hidden;
+  position: relative;
+  touch-action: none;
+}
+canvas { display: block; width: 100%; height: 100%; }
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  background: rgba(10, 15, 26, 0.92);
+  backdrop-filter: blur(6px);
+  z-index: 10;
+  transition: opacity 0.2s, visibility 0.2s;
+}
+.overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.overlay h1 {
+  font-size: clamp(1.8rem, 6vw, 2.4rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 8px;
+  background: linear-gradient(135deg, var(--accent), var(--gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.overlay p { color: var(--muted); margin-bottom: 24px; font-size: 0.95rem; line-height: 1.5; }
+.btn {
+  appearance: none;
+  border: none;
+  background: linear-gradient(135deg, var(--accent), #00c8e6);
+  color: #051020;
+  font-weight: 700;
+  font-size: 1rem;
+  padding: 14px 36px;
+  border-radius: 100px;
+  cursor: pointer;
+  touch-action: manipulation;
+  box-shadow: 0 4px 16px -4px var(--accent);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.btn:active { transform: scale(0.97); box-shadow: 0 2px 8px -4px var(--accent); }
+.btn.secondary { background: transparent; color: var(--accent); border: 2px solid var(--accent); box-shadow: none; }
+.hud {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  z-index: 5;
+  pointer-events: none;
+}
+.hud-item {
+  background: rgba(10, 15, 26, 0.85);
+  backdrop-filter: blur(4px);
+  border: 1px solid #1f2a44;
+  border-radius: 12px;
+  padding: 8px 14px;
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.hud-label { color: var(--muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.05em; }
+.hud-value { color: var(--accent); font-weight: 700; font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.hud-value.gold { color: var(--gold); }
+.wind-indicator {
+  position: absolute;
+  top: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(10, 15, 26, 0.85);
+  backdrop-filter: blur(4px);
+  border: 1px solid #1f2a44;
+  border-radius: 100px;
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  color: var(--accent);
+  z-index: 5;
+  pointer-events: none;
+}
+.wind-arrow { display: inline-block; transition: transform 0.3s; font-size: 1rem; }
+.charge-bar {
+  position: absolute;
+  bottom: 120px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 10px;
+  background: rgba(10, 15, 26, 0.8);
+  border: 1px solid #1f2a44;
+  border-radius: 5px;
+  overflow: hidden;
+  z-index: 5;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.charge-bar.visible { opacity: 1; }
+.charge-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, var(--gold), var(--accent));
+  border-radius: 5px;
+  transition: width 0.05s linear;
+}
+.instruction {
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-align: center;
+  pointer-events: none;
+}
+.arrows-left {
+  position: absolute;
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 5;
+  pointer-events: none;
+}
+.arrow-icon {
+  width: 24px;
+  height: 24px;
+  opacity: 0.3;
+  filter: drop-shadow(0 0 4px var(--accent));
+  transition: opacity 0.2s;
+}
+.arrow-icon.active { opacity: 1; }
+@media (max-width: 480px) {
+  .phone { border-radius: 0; max-width: 100%; aspect-ratio: auto; height: 100vh; }
+  body { padding: 0; }
+}
+</style>
+</head>
+<body>
+<div class="phone">
+  <canvas id="c"></canvas>
+
+  <div class="hud">
+    <div class="hud-item">
+      <span class="hud-label">Счёт</span>
+      <span class="hud-value" id="score">0</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">Лучший</span>
+      <span class="hud-value gold" id="best">0</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">Стрел</span>
+      <span class="hud-value" id="arrows">10</span>
+    </div>
+  </div>
+
+  <div class="wind-indicator" id="windIndicator">
+    <span>Ветер</span>
+    <span class="wind-arrow" id="windArrow">→</span>
+    <span id="windValue">0.0</span>
+  </div>
+
+  <div class="charge-bar" id="chargeBar">
+    <div class="charge-fill" id="chargeFill"></div>
+  </div>
+
+  <div class="arrows-left" id="arrowsLeft"></div>
+
+  <p class="instruction">Зажми и тяни назад, чтобы натянуть тетиву. Отпусти — выстрел.</p>
+
+  <div class="overlay" id="menuOverlay">
+    <h1>ЛУЧНИК</h1>
+    <p>Попадай в центр мишени. Учти ветер и гравитацию — чем дальше цель, тем сильнее отклонение.</p>
+    <button class="btn" id="startBtn">Начать игру</button>
+  </div>
+
+  <div class="overlay hidden" id="gameOverOverlay">
+    <h1>ИГРА ОКОНЧЕНА</h1>
+    <p>Твой счёт: <span id="finalScore" style="color:var(--accent);font-weight:700">0</span></p>
+    <p id="bestMsg" style="color:var(--muted);font-size:0.85rem"></p>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:8px">
+      <button class="btn" id="restartBtn">Заново</button>
+      <button class="btn secondary" id="menuBtn">В меню</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+
+const VW = 360, VH = 640;
+let DPR = 1;
+
+function resize() {
+  const rect = canvas.getBoundingClientRect();
+  DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  canvas.width = Math.floor(rect.width * DPR);
+  canvas.height = Math.floor(rect.height * DPR);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener('resize', resize);
+resize();
+
+const GRAVITY = 680;
+const ARROW_SPEED_MIN = 380;
+const ARROW_SPEED_MAX = 760;
+const CHARGE_TIME = 1.2;
+const MAX_ARROWS = 10;
+const TARGET_RADIUS = 48;
+const TARGET_DISTANCE_MIN = 180;
+const TARGET_DISTANCE_MAX = 300;
+
+let state = 'MENU';
+let score = 0;
+let best = parseInt(localStorage.getItem('archery_best') || '0', 10);
+let arrowsLeft = MAX_ARROWS;
+let wind = 0;
+let charge = 0;
+let charging = false;
+let chargeStart = 0;
+let lastTime = 0;
+
+let target = { x: 0, y: 0, r: TARGET_RADIUS };
+let stuckArrows = [];
+let projectile = null;
+
+const menuOverlay = document.getElementById('menuOverlay');
+const gameOverOverlay = document.getElementById('gameOverOverlay');
+const startBtn = document.getElementById('startBtn');
+const restartBtn = document.getElementById('restartBtn');
+const menuBtn = document.getElementById('menuBtn');
+const chargeBar = document.getElementById('chargeBar');
+const chargeFill = document.getElementById('chargeFill');
+const windArrow = document.getElementById('windArrow');
+const windValue = document.getElementById('windValue');
+const arrowsLeftEl = document.getElementById('arrowsLeft');
+const scoreEl = document.getElementById('score');
+const bestEl = document.getElementById('best');
+const arrowsEl = document.getElementById('arrows');
+const finalScoreEl = document.getElementById('finalScore');
+const bestMsgEl = document.getElementById('bestMsg');
+
+function setOverlay(show, overlay) {
+  overlay.classList.toggle('hidden', !show);
+}
+function updateHUD() {
+  scoreEl.textContent = score;
+  bestEl.textContent = best;
+  arrowsEl.textContent = arrowsLeft;
+  arrowsLeftEl.innerHTML = '';
+  for (let i = 0; i < MAX_ARROWS; i++) {
+    const div = document.createElement('div');
+    div.className = 'arrow-icon' + (i < arrowsLeft ? ' active' : '');
+    div.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 12h18M18 6l6 6-6 6"/></svg>`;
+    arrowsLeftEl.appendChild(div);
+  }
+}
+function randomWind() {
+  wind = (Math.random() - 0.5) * 220;
+  windArrow.style.transform = wind >= 0 ? 'rotate(0deg)' : 'rotate(180deg)';
+  windValue.textContent = Math.abs(wind).toFixed(1);
+}
+function spawnTarget() {
+  const distance = TARGET_DISTANCE_MIN + Math.random() * (TARGET_DISTANCE_MAX - TARGET_DISTANCE_MIN);
+  const groundY = VH - 60;
+  const targetY = groundY - TARGET_RADIUS - 10;
+  target = {
+    x: VW / 2 + distance,
+    y: targetY,
+    r: TARGET_RADIUS,
+    groundY: groundY
+  };
+}
+function resetGame() {
+  score = 0;
+  arrowsLeft = MAX_ARROWS;
+  stuckArrows = [];
+  projectile = null;
+  charging = false;
+  charge = 0;
+  chargeBar.classList.remove('visible');
+  chargeFill.style.width = '0%';
+  randomWind();
+  spawnTarget();
+  updateHUD();
+}
+function startGame() {
+  state = 'PLAYING';
+  resetGame();
+  setOverlay(false, menuOverlay);
+  setOverlay(false, gameOverOverlay);
+}
+function endGame() {
+  state = 'GAMEOVER';
+  if (score > best) {
+    best = score;
+    localStorage.setItem('archery_best', String(best));
+    bestMsgEl.textContent = '🏆 Новый рекорд!';
+    bestMsgEl.style.color = 'var(--gold)';
+  } else {
+    bestMsgEl.textContent = `Рекорд: ${best}`;
+    bestMsgEl.style.color = 'var(--muted)';
+  }
+  finalScoreEl.textContent = score;
+  setOverlay(true, gameOverOverlay);
+}
+
+function getPointerPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+  const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+  return {
+    x: (clientX - rect.left) / DPR,
+    y: (clientY - rect.top) / DPR
+  };
+}
+
+function onPointerDown(e) {
+  if (state !== 'PLAYING') return;
+  if (arrowsLeft <= 0) return;
+  if (projectile) return;
+  const pos = getPointerPos(e);
+  const bowX = 60;
+  const bowY = VH / 2 + 40;
+  const dx = pos.x - bowX;
+  const dy = pos.y - bowY;
+  const dist = Math.hypot(dx, dy);
+  if (dist > 180) return;
+  charging = true;
+  chargeStart = performance.now() / 1000;
+  chargeBar.classList.add('visible');
+  e.preventDefault();
+}
+function onPointerMove(e) {
+  if (!charging) return;
+  const now = performance.now() / 1000;
+  charge = Math.min(1, (now - chargeStart) / CHARGE_TIME);
+  chargeFill.style.width = (charge * 100) + '%';
+}
+function onPointerUp(e) {
+  if (!charging) return;
+  charging = false;
+  chargeBar.classList.remove('visible');
+  chargeFill.style.width = '0%';
+
+  const pos = getPointerPos(e);
+  const bowX = 60;
+  const bowY = VH / 2 + 40;
+  const dx = pos.x - bowX;
+  const dy = pos.y - bowY;
+  const angle = Math.atan2(dy, dx);
+
+  const speed = ARROW_SPEED_MIN + (ARROW_SPEED_MAX - ARROW_SPEED_MIN) * Math.max(0.15, charge);
+  const vx = Math.cos(angle) * speed;
+  const vy = Math.sin(angle) * speed;
+
+  projectile = {
+    x: bowX,
+    y: bowY,
+    vx,
+    vy,
+    angle,
+    length: 48,
+    stuck: false,
+    wx: 0,
+    wy: 0,
+    wang: 0
+  };
+  arrowsLeft--;
+  updateHUD();
+  charge = 0;
+}
+canvas.addEventListener('pointerdown', onPointerDown);
+canvas.addEventListener('pointermove', onPointerMove);
+canvas.addEventListener('pointerup', onPointerUp);
+canvas.addEventListener('pointerleave', onPointerUp);
+canvas.addEventListener('pointercancel', onPointerUp);
+
+startBtn.addEventListener('click', startGame);
+restartBtn.addEventListener('click', startGame);
+menuBtn.addEventListener('click', () => {
+  state = 'MENU';
+  setOverlay(false, gameOverOverlay);
+  setOverlay(true, menuOverlay);
+  resetGame();
+});
+
+function update(dt) {
+  if (state !== 'PLAYING') return;
+
+  if (projectile && !projectile.stuck) {
+    projectile.vy += GRAVITY * dt;
+    projectile.vx += wind * dt * 0.6;
+    projectile.x += projectile.vx * dt;
+    projectile.y += projectile.vy * dt;
+    projectile.angle = Math.atan2(projectile.vy, projectile.vx);
+
+    const dx = target.x - projectile.x;
+    const dy = target.y - projectile.y;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist <= target.r + 4) {
+      projectile.stuck = true;
+      projectile.wx = projectile.x;
+      projectile.wy = projectile.y;
+      projectile.wang = projectile.angle;
+
+      const hitDist = dist;
+      const accuracy = 1 - hitDist / (target.r + 4);
+      let points = Math.max(1, Math.round(10 * accuracy));
+      if (hitDist <= target.r * 0.15) points = 10;
+      else if (hitDist <= target.r * 0.35) points = 8;
+      else if (hitDist <= target.r * 0.6) points = 6;
+      else if (hitDist <= target.r * 0.85) points = 4;
+      else points = 2;
+
+      score += points;
+      stuckArrows.push({ x: projectile.wx, y: projectile.wy, angle: projectile.wang, points });
+      updateHUD();
+      projectile = null;
+
+      if (arrowsLeft <= 0) {
+        setTimeout(endGame, 600);
+      } else {
+        setTimeout(() => {
+          randomWind();
+          spawnTarget();
+        }, 800);
+      }
+    }
+
+    if (projectile && (projectile.y > VH + 50 || projectile.x < -50 || projectile.x > VW + 50)) {
+      projectile = null;
+      if (arrowsLeft <= 0) {
+        setTimeout(endGame, 300);
+      } else {
+        setTimeout(() => {
+          randomWind();
+          spawnTarget();
+        }, 500);
+      }
+    }
+  }
+}
+
+function drawTarget() {
+  const { x, y, r } = target;
+  const rings = 5;
+  for (let i = rings; i >= 1; i--) {
+    const rr = (r * i) / rings;
+    ctx.beginPath();
+    ctx.arc(x, y, rr, 0, Math.PI * 2);
+    const isOdd = i % 2 === 1;
+    ctx.fillStyle = isOdd ? '#ffffff' : '#1a1a2e';
+    ctx.fill();
+  }
+  ctx.beginPath();
+  ctx.arc(x, y, r / rings, 0, Math.PI * 2);
+  ctx.fillStyle = var_accent || '#00f2ff';
+  ctx.fill();
+
+  ctx.strokeStyle = '#00f2ff44';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x - r - 10, y);
+  ctx.lineTo(x + r + 10, y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x, y - r - 10);
+  ctx.lineTo(x, y + r + 10);
+  ctx.stroke();
+}
+
+function drawArrow(ax, ay, angle, stuck = false, points = null) {
+  const len = 48;
+  const headLen = 14;
+  const shaftW = 3;
+
+  const cx = ax - Math.cos(angle) * (len * 0.45);
+  const cy = ay - Math.sin(angle) * (len * 0.45);
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+
+  const grad = ctx.createLinearGradient(-len * 0.45, 0, len * 0.55, 0);
+  grad.addColorStop(0, '#2a2a3e');
+  grad.addColorStop(0.5, '#3d3d5c');
+  grad.addColorStop(1, '#1a1a2e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(-len * 0.45, -shaftW / 2, len, shaftW);
+
+  ctx.fillStyle = stuck ? '#ffd700' : '#00f2ff';
+  ctx.beginPath();
+  ctx.moveTo(len * 0.55, 0);
+  ctx.lineTo(len * 0.55 - headLen, -headLen * 0.5);
+  ctx.lineTo(len * 0.55 - headLen, headLen * 0.5);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#8b6b2a';
+  ctx.fillRect(-len * 0.45 - 4, -shaftW / 2, 4, shaftW);
+
+  ctx.fillStyle = stuck ? '#ffd70088' : '#00f2ff44';
+  ctx.beginPath();
+  ctx.moveTo(-len * 0.45 - 4, -shaftW / 2);
+  ctx.lineTo(-len * 0.45 - 10, -8);
+  ctx.lineTo(-len * 0.45 - 10, 8);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+
+  if (stuck && points !== null) {
+    ctx.fillStyle = points >= 8 ? '#ffd700' : '#00f2ff';
+    ctx.font = 'bold 14px system-ui';
+    ctx.textAlign = 'center';
+    ctx.fillText(`+${points}`, ax, ay - 30);
+  }
+}
+
+function drawBow(chargeAmt) {
+  const bowX = 60;
+  const bowY = VH / 2 + 40;
+  const drawDist = 80 * chargeAmt;
+
+  ctx.strokeStyle = '#00f2ff';
+  ctx.lineWidth = 4;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  const curve = 60 + drawDist * 0.5;
+  ctx.moveTo(bowX, bowY - 100);
+  ctx.quadraticCurveTo(bowX - curve, bowY, bowX, bowY + 100);
+  ctx.stroke();
+
+  ctx.strokeStyle = '#8b6b2a';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(bowX, bowY - 100);
+  ctx.lineTo(bowX - drawDist, bowY);
+  ctx.lineTo(bowX, bowY + 100);
+  ctx.stroke();
+
+  ctx.fillStyle = '#1a1a2e';
+  ctx.beginPath();
+  ctx.arc(bowX, bowY, 14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#00f2ff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+function drawProjectile() {
+  if (!projectile) return;
+  if (projectile.stuck) {
+    drawArrow(projectile.wx, projectile.wy, projectile.wang, true);
+  } else {
+    drawArrow(projectile.x, projectile.y, projectile.angle, false);
+  }
+}
+
+function drawStuckArrows() {
+  for (const a of stuckArrows) {
+    drawArrow(a.x, a.y, a.angle, true, a.points);
+  }
+}
+
+function drawGround() {
+  const groundY = VH - 60;
+  ctx.fillStyle = '#0d1422';
+  ctx.fillRect(0, groundY, VW, VH - groundY);
+
+  ctx.fillStyle = '#1a2335';
+  for (let x = -20; x < VW + 40; x += 40) {
+    const h = 20 + Math.sin(x * 0.05) * 8;
+    ctx.beginPath();
+    ctx.moveTo(x, groundY);
+    ctx.lineTo(x + 20, groundY - h);
+    ctx.lineTo(x + 40, groundY);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.strokeStyle = '#00f2ff22';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, groundY);
+  ctx.lineTo(VW, groundY);
+  ctx.stroke();
+}
+
+function drawWindParticles() {
+  if (Math.abs(wind) < 10) return;
+  ctx.fillStyle = '#00f2ff33';
+  const dir = wind > 0 ? 1 : -1;
+  for (let i = 0; i < 12; i++) {
+    const x = (VW / 2 + target.x) / 2 + Math.sin(performance.now() / 800 + i) * 40 * dir;
+    const y = target.y - 60 + i * 10;
+    const r = 2 + Math.sin(performance.now() / 600 + i) * 1.5;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, VW, VH);
+
+  const grad = ctx.createLinearGradient(0, 0, 0, VH);
+  grad.addColorStop(0, '#0a0f1a');
+  grad.addColorStop(0.5, '#0d1426');
+  grad.addColorStop(1, '#0f1a2e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, VW, VH);
+
+  ctx.fillStyle = '#00f2ff11';
+  for (let i = 0; i < 30; i++) {
+    const x = (i * 127 + performance.now() / 80) % VW;
+    const y = (i * 193 + performance.now() / 120) % VH;
+    ctx.beginPath();
+    ctx.arc(x, y, 0.5 + Math.sin(i) * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawGround();
+  drawWindParticles();
+  drawTarget();
+  drawStuckArrows();
+  drawProjectile();
+  drawBow(charging ? charge : 0);
+
+  if (state === 'PLAYING' && charging) {
+    const bowX = 60;
+    const bowY = VH / 2 + 40;
+    ctx.fillStyle = '#00f2ff88';
+    ctx.font = '12px system-ui';
+    ctx.textAlign = 'left';
+    ctx.fillText(`${Math.round(charge * 100)}%`, bowX + 20, bowY - 120);
+  }
+}
+
+function loop(t) {
+  const dt = Math.min((t - lastTime) / 1000, 0.05);
+  lastTime = t;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
